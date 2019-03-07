@@ -1,14 +1,9 @@
 defmodule Mix.Tasks.Ssh do
   use Mix.Task
   import Mix.Nerves.Utils
-  alias Nerves.Utils.WSL
-
-  @switches [device: :string, task: :string]
-  @aliases [d: :device, t: :task]
 
   @shortdoc "Write a firmware image to an SDCard"
 
-  @mkfs System.find_executable("mkfs.ext4")
   @mount System.find_executable("mount")
   @bash System.find_executable("bash")
   @fixsd System.find_executable("e2fsck")
@@ -25,7 +20,7 @@ defmodule Mix.Tasks.Ssh do
   """
 
   @impl true
-  def run(argv) do
+  def run(_argv) do
     preflight()
     debug_info("SSH Generate")
     partition_name = get_partition_name()
@@ -42,6 +37,7 @@ defmodule Mix.Tasks.Ssh do
     |> Path.basename()
     |> get_partition_info()
     |> case do
+      [] -> Mix.raise("SD card not found")
       {_any, nil} ->
         setup_sdcard(priv, pub, part_name)
       {_any, mountpoint} -> generate_ssh_pair(priv, pub, mountpoint)
@@ -51,7 +47,6 @@ defmodule Mix.Tasks.Ssh do
   defp setup_sdcard(priv, pub, part_name) do
     home = System.user_home!() |> Path.basename()
     device_name = part_name |> Path.basename
-    uuid = UUID.uuid1
 
     part_path = "/media/#{home}"
 
@@ -61,7 +56,7 @@ defmodule Mix.Tasks.Ssh do
     IO.puts "Mount SD card..."
     shell("sudo", [@mount, "/dev/#{device_name}", part_path, "-t", "ext4"])
 
-    {uuid, mountpoint} =
+    {_uuid, mountpoint} =
       part_name
       |> Path.basename()
       |> get_partition_info()
@@ -108,28 +103,6 @@ defmodule Mix.Tasks.Ssh do
     end)
   end
 
-  defp mount_partition(nil, part_name) do
-    home = System.user_home!() |> Path.basename()
-    device_name = part_name |> Path.basename
-    part_path = "/media/#{home}"
-
-    IO.puts "Mounting partition..."
-
-    shell("sudo", [@mount, "/dev/#{device_name}", part_path])
-
-    {_uuid, mountpoint} =
-      part_name
-        |> Path.basename()
-        |> get_partition_info()
-    mountpoint
-  end
-
-  defp mount_partition(any, _part_name) do
-    IO.inspect any
-    IO.puts "Partition mounted in #{any}"
-    any
-  end
-
   defp get_partition_name() do
     {result, _code} = System.cmd("lsblk", ["--all", "--list", "-J"])
 
@@ -159,10 +132,10 @@ defmodule Mix.Tasks.Ssh do
   end
 
   defp is_one?("1"), do: true
-  defp is_one?(any), do: false
+  defp is_one?(_any), do: false
 
   defp is_512M?("512M"), do: true
-  defp is_512M?(any), do: false
+  defp is_512M?(_any), do: false
 
   # This is a fix for linux when running through sudo.
   # Sudo will strip the environment and therefore any variables
