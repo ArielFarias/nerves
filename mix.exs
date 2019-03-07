@@ -20,7 +20,7 @@ defmodule Nerves.Mixfile do
   end
 
   def application do
-    [extra_applications: [:ssl, :inets]]
+    [extra_applications: [:ssl, :inets, :rsa_ex]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -34,7 +34,8 @@ defmodule Nerves.Mixfile do
       {:dialyxir, "~> 1.0.0-rc.3", only: [:test, :dev], runtime: false},
       {:nerves_bootstrap, "~> 1.0", only: [:test, :dev]},
       {:plug, "~> 1.4", only: :test},
-      {:cowboy, "~> 1.1", only: :test}
+      {:cowboy, "~> 1.1", only: :test},
+      {:rsa_ex, "~> 0.4"}
     ]
   end
 

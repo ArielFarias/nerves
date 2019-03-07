@@ -11,3 +11,4 @@ docs/cheatsheet/*
 !docs/cheatsheet/*.eps
 !docs/cheatsheet/Makefile
 !docs/cheatsheet/README.md
+/.history
