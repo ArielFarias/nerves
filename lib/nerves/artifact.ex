@@ -113,9 +113,14 @@ defmodule Nerves.Artifact do
   """
   @spec download_name(Nerves.Package.t()) :: String.t()
   def download_name(pkg, opts \\ []) do
-    checksum_short = opts[:checksum_short] || @checksum_short
-    "#{pkg.app}-#{host_tuple(pkg)}-#{pkg.version}-#{checksum(pkg, short: checksum_short)}"
+    case opts[:target] do
+      :custom_rpi3 -> name(pkg)
+      _any ->
+        checksum_short = opts[:checksum_short] || @checksum_short
+        "#{pkg.app}-#{host_tuple(pkg)}-#{pkg.version}-#{checksum(pkg, short: checksum_short)}"
+    end
   end
+
 
   def parse_download_name(name) when is_binary(name) do
     name = Regex.run(~r/(.*)-([^-]*)-(.*)-([^-]*)/, name)
@@ -266,10 +271,22 @@ defmodule Nerves.Artifact do
         # Check entire checksum length
         # This code can be removed sometime after nerves 1.0
         # and instead use the commented line above
-        Keyword.get(pkg.config, :artifact_sites, [])
-        |> Enum.reduce([], fn site, urls ->
-          [expand_site(site, pkg), expand_site(site, pkg, checksum_short: 64) | urls]
-        end)
+        # IO.inspect Keyword.get(pkg.config, :artifact_sites, [])
+        releases = Keyword.get(pkg.config, :artifact_sites, [])
+        releases[:github_releases]
+        |> Path.basename()
+        |> case do
+          "custom_rpi3" ->
+            releases
+            |> Enum.reduce([], fn site, urls ->
+              [expand_site(site, pkg, target: :custom_rpi3), expand_site(site, pkg, target: :custom_rpi3) | urls]
+            end)
+          any ->
+            releases
+            |> Enum.reduce([], fn site, urls ->
+              [expand_site(site, pkg), expand_site(site, pkg, checksum_short: 64) | urls]
+            end)
+        end
 
       urls when is_list(urls) ->
         # artifact_url is deprecated and this code can be removed sometime following
